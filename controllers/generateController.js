@@ -14,6 +14,8 @@ exports.generateDraft = async (req, res) => {
 
     console.log(`🔍 Mencari konteks dari RAG... (Tipe: ${docType})`);
     const context = await getContextFromRAG(query);
+    console.log(`📚 Konteks ditemukan: ${context}`);
+
 
     console.log(`✍️ Generate draft dengan Gemini... (Bahasa: ${targetLang})`);
     
