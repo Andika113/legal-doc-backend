@@ -1,0 +1,26 @@
+{
+  "name": "translate-api-test-client",
+  "version": "1.0.0",
+  "description": "Express.js test client untuk Legal Doc Translate API",
+  "main": "test-translate-client.js",
+  "scripts": {
+    "start": "node test-translate-client.js",
+    "dev": "nodemon test-translate-client.js"
+  },
+  "keywords": [
+    "translate",
+    "test",
+    "client"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "axios": "^1.6.0",
+    "form-data": "^4.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

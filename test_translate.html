@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Uji Coba Sworn Translate</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 25px; background-color: #f4f7f9; }
+        .container { max-width: 700px; margin: 20px auto; background-color: #fff; border: 1px solid #e0e0e0; padding: 30px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
+        h2 { color: #333; border-bottom: 2px solid #5c6bc0; padding-bottom: 10px; margin-bottom: 25px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+        input[type="file"], input[type="text"], select { 
+            margin-bottom: 18px; 
+            padding: 12px; 
+            width: 100%; 
+            box-sizing: border-box; 
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        button { 
+            padding: 12px 25px; 
+            background-color: #5c6bc0; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+        button:disabled { background-color: #bdbdbd; cursor: not-allowed; }
+        button:hover:not(:disabled) { background-color: #3f51b5; }
+        .result { margin-top: 25px; padding: 18px; background-color: #e8eaf6; border: 1px solid #c5cae9; border-radius: 4px; }
+        .error { color: #e53935; font-weight: bold; }
+        .success { color: #43a047; font-weight: bold; }
+        #statusMessage { border: 1px dashed #ccc; padding: 10px; margin-bottom: 20px; border-radius: 4px; text-align: center; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+        code { background-color: #eee; padding: 2px 4px; border-radius: 3px; }
+        textarea { width: 100%; height: 150px; border: 1px solid #ccc; border-radius: 4px; padding: 10px; box-sizing: border-box; font-family: Consolas, monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Uji Coba Sworn Translate (Qwen/Gemini) 🌐</h2>
+        <p>Endpoint: POST http://localhost:3000/api/translate</p>
+        <p id="statusMessage" class="error">Status: Idle</p>
+
+        <form id="translateForm">
+            
+            <label for="token">1. Token Autentikasi (JWT):</label>
+            <input type="text" id="token" placeholder="Bearer Token (JWT) Anda (Contoh: eyJhbGc...)" required
+                   value="[GANTI DENGAN TOKEN ASLI ANDA]">
+            
+            <label for="file">2. Pilih File (.docx):</label>
+            <input type="file" id="file" name="fileToTranslate" accept=".docx" required>
+            
+            <label for="lang">3. Bahasa Target:</label>
+            <select id="lang" name="targetLang">
+                <option value="ko" selected>Korea (ko) - Uji Glosarium</option>
+                <option value="en">Inggris (en)</option>
+            </select>
+
+            <label for="format">4. Format Output:</label>
+            <select id="format" name="format">
+                <option value="docx" selected>DOCX</option>
+                <option value="pdf">PDF</option>
+            </select>
+            
+            <input type="hidden" name="text" id="hiddenText" value="">
+            <input type="hidden" name="query" id="hiddenQuery" value="">
+
+            <button type="submit" id="submitBtn">Mulai Terjemahan</button>
+        </form>
+
+        <div class="result" id="output">
+            <pre>Hasil akan muncul di sini.</pre>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('translateForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const statusMessage = document.getElementById('statusMessage');
+            const outputDiv = document.getElementById('output');
+            const submitBtn = document.getElementById('submitBtn');
+
+            // 1. Ambil Data
+            const token = document.getElementById('token').value.replace('Bearer ', '').trim();
+            const fileInput = document.getElementById('file');
+            const targetLang = document.getElementById('lang').value;
+            const format = document.getElementById('format').value;
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                statusMessage.textContent = "Error: Mohon pilih file!";
+                statusMessage.className = 'error';
+                return;
+            }
+            if (!token) {
+                statusMessage.textContent = "Error: Token Autentikasi diperlukan!";
+                statusMessage.className = 'error';
+                return;
+            }
+
+            // 2. Siapkan FormData (untuk mengirim file dan data teks)
+            const formData = new FormData();
+            formData.append('fileToTranslate', file); // Kunci ini harus sama dengan Multer
+            formData.append('targetLang', targetLang);
+            formData.append('format', format);
+            // Tambahkan field kosong lainnya (penting untuk form-data)
+            formData.append('text', document.getElementById('hiddenText').value); 
+            formData.append('query', document.getElementById('hiddenQuery').value);
+            
+            // 3. Konfigurasi Fetch
+            submitBtn.disabled = true;
+            statusMessage.textContent = "Status: Memproses di Backend (Lihat Terminal Server)...";
+            statusMessage.className = 'processing'; // Ganti kelas CSS
+            outputDiv.innerHTML = '<pre>Menunggu respons...</pre>'; // Reset output
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/translate', {
+                    method: 'POST',
+                    headers: {
+                        // Header Autentikasi WAJIB
+                        'Authorization': `Bearer ${token}`
+                        // Content-Type diatur otomatis oleh browser untuk FormData
+                    },
+                    body: formData 
+                });
+
+                // Cek status response sebelum parsing JSON
+                if (!response.ok) {
+                    const errorText = await response.text(); // Coba baca error sebagai teks
+                    console.error("Server Error Response Text:", errorText);
+                    let errorDetails = `Status: ${response.status} ${response.statusText}`;
+                    try {
+                        const errorJson = JSON.parse(errorText); // Coba parse sebagai JSON
+                        errorDetails = errorJson.details || errorJson.error || JSON.stringify(errorJson);
+                    } catch (parseError) {
+                        // Jika bukan JSON, gunakan teks mentah
+                        errorDetails += ` | Respons: ${errorText}`; 
+                    }
+                    throw new Error(errorDetails);
+                }
+
+                const result = await response.json();
+
+                // 4. Tampilkan Hasil Sukses
+                statusMessage.textContent = "✅ Status: Sukses! File siap diunduh.";
+                statusMessage.className = 'success';
+                
+                // Pastikan result.data dan result.data.stats ada
+                const stats = result.data?.stats || {};
+                const cost = stats.estimatedCost !== undefined ? `$${stats.estimatedCost.toFixed(6)}` : 'N/A';
+                
+                outputDiv.innerHTML = `
+                    <p><strong>Pesan Server:</strong> ${result.message || 'Sukses'}</p>
+                    <p><strong>Engine Digunakan:</strong> ${result.data?.usedEngine || 'Tidak diketahui'}</p>
+                    <p><strong>File Tersimpan:</strong> <code>${result.data?.file || 'N/A'}</code> (Cek folder output/)</p>
+                    <p><strong>Total Karakter:</strong> ${stats.totalChars?.toLocaleString() || 'N/A'}</p>
+                    <p><strong>Estimasi Biaya:</strong> ${cost}</p>
+                    <hr>
+                    <p><strong>Potongan Teks Hasil (500 Karakter Pertama):</strong></p>
+                    <textarea rows="10" cols="50" readonly style="width: 100%; height: 200px;">${(result.data?.translatedText || '').substring(0, 500) + '...'}</textarea>
+                `;
+
+            } catch (error) {
+                // Tangani error dan tampilkan
+                statusMessage.textContent = "❌ Status: GAGAL! Terjadi Error.";
+                statusMessage.className = 'error';
+                outputDiv.innerHTML = `<p class="error">Detail Error: ${error.message}</p>`;
+                console.error("Fetch Error Details:", error);
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
